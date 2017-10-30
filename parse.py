@@ -5,27 +5,40 @@ import sys
 from bs4 import BeautifulSoup
 
 cards_directory = 'www.ishtar-collective.net/cards/'
-cards_html = []
+chapters = []
 
 for filename in os.listdir(cards_directory):
     path = os.path.join(cards_directory, filename)
-    sys.stderr.write("reading " + path + "\n")
     with open(os.path.join(path)) as f:
         try:
             html = f.read()
-            cards_html.append(html)
+            sys.stderr.write("Read " + path + "\n")
         except UnicodeDecodeError:
             # Poor man's text file detection
+            sys.stderr.write(path + " is not a text file. Skipping!\n")
             pass
 
-for html in cards_html:
     soup = BeautifulSoup(html, 'html.parser')
-    # import pdb; pdb.set_trace()
-    title = soup.title.text.split('\u2014')[0]  # split on em-dash
-    text = soup.find(attrs={"name": "twitter:description"})['content']
+    full_title = soup.find('h2', attrs={'class': 'card-title'}).text
+    title, subtitle = full_title.split(':', 1)
+    twitter_description = soup.find('meta', attrs={'name': 'twitter:description'})['content']
+    verse_text = " ".join(twitter_description.split(" ")[0:2])
+    verse_number = float(twitter_description.split(" ")[1].replace(':', '.'))
+    text = soup.find('div', attrs={'class': 'description'}).text
 
-    print(title)
-    print()
-    print(text)
-    print()
-    print()
+    chapter = {
+        'title': title,
+        'subtitle': subtitle,
+        'verse': verse_text,
+        'text': text,
+        'sort': verse_number
+    }
+    chapters.append(chapter)
+
+chapters.sort(key=lambda c: c['sort'])
+
+for chapter in chapters:
+    print(chapter['title'].strip())
+    print(chapter['subtitle'].strip())
+    print(chapter['verse'].strip())
+    print(chapter['text'].strip())
